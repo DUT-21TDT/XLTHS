@@ -1,0 +1,67 @@
+import os
+import glob
+import scipy
+import numpy as np
+
+config = {
+  "train_path":"signals/NguyenAmHuanLuyen-16k",
+  "valid_path":"signals/NguyenAmKiemThu-16k",
+}
+
+def getWavFileContents(pathFile):
+    sample_rate, data = scipy.io.wavfile.read(pathFile)
+    data = np.array(data, dtype=float)
+    length = data.shape[0] / sample_rate
+    return sample_rate, data, length
+
+class SignalDataset():
+  def __init__(self, data_directory):
+    self.audio_paths = self.load(data_directory)
+  
+  def __getitem__(self, idx):
+    audio_path = self.audio_paths[idx]
+
+    # ==== get label =====================
+    filename = os.path.basename(audio_path)
+    label = filename.split(".")[0]
+    # ====================================
+
+    # ==== read data =====================
+    sample_rate, data, length = getWavFileContents(audio_path)
+    # ====================================
+
+    # === get human say ==================
+    human = self.audio_paths[idx].split("/")[-2]
+    # ====================================
+
+    return (sample_rate, data, length), human , label
+
+  def __len__(self):
+    return len(self.audio_paths)
+
+  def load(self, data_directory):
+    audio_paths = []
+    for audio_path in glob.glob(data_directory+"/**/*.wav"):
+        audio_paths.append(audio_path)
+    return audio_paths
+  
+
+print(os.listdir(config["train_path"]))
+
+train_data = SignalDataset(config["train_path"])
+valid_data = SignalDataset(config["valid_path"])
+
+import matplotlib.pyplot as plt
+plt.rcParams["figure.figsize"] = (20,10)
+fig, axs = plt.subplots(5)
+fig.figsize = (20,30)
+for (i) in range(5):
+  (sample_rate, data, length), human,label = train_data[i]
+  time = np.linspace(0., length, data.shape[0])
+  axs[i].set_title("{} - {}".format(human, label))
+  axs[i].specgram(data, Fs = sample_rate)
+  axs[i].set(xlabel='Time', ylabel='Frequency')
+  
+fig.tight_layout()
+fig.show()
+plt.show()
