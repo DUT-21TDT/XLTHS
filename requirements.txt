@@ -2,3 +2,5 @@ numpy
 matplotlib
 librosa
 catboost
+scipy
+scikit-learn
