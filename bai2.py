@@ -4,21 +4,51 @@ import librosa
 import matplotlib.pyplot as plt
 import glob
 
+
+
 config = {
   "train_path":"signals/NguyenAmHuanLuyen-16k",
   "valid_path":"signals/NguyenAmKiemThu-16k",
   "nffts": [512, 1024, 2048],
-  "am": ["a", "e", "i", "o", "u"]
+  "am": ["a", "e", "i", "o", "u"],
+  "swfunc": [np.ones, np.hamming, np.hanning, np.blackman, np.bartlett]
 }
 
-def SingleFrameFFT(frame, nFFT):
-   return np.fft.fft(frame,nFFT)
+# No window function
+# def SingleFrameFFT(frame, nFFT):
+#    return np.fft.fft(frame,nFFT)
 
+# Rectangle
+# def SingleFrameFFT(frame, nFFT):
+#   signal = np.ones(len(frame)) * frame
+#   return np.fft.fft(frame, nFFT)
 
-def euclidean_distance(a, b):
-    return abs(a - b)
+# Hamming
+# def SingleFrameFFT(frame, nFFT):
+#   signal = np.hamming(len(frame)) * frame
+#   return np.fft.fft(signal, nFFT)
 
-def getFeaturesVector(file_path, nFFT):
+# Hann
+# def SingleFrameFFT(frame, nFFT):
+#   signal = np.hanning(len(frame)) * frame
+#   return np.fft.fft(signal, nFFT)
+
+# Blackman
+# def SingleFrameFFT(frame, nFFT):
+#   signal = np.blackman(len(frame)) * frame
+#   return np.fft.fft(signal, nFFT)
+
+# Bartlett
+# def SingleFrameFFT(frame, nFFT):
+#   signal = np.bartlett(len(frame)) * frame
+#   return np.fft.fft(signal, nFFT)
+
+def SingleFrameFFT(frame, nFFT, swfunc):
+  signal = swfunc(len(frame)) * frame
+  return np.fft.fft(signal, nFFT)
+
+def getFeaturesVector(file_path, nFFT, swfunc):
+
   # ==== get label =====================
   filename = os.path.basename(file_path)
   # ====================================
@@ -59,79 +89,85 @@ def getFeaturesVector(file_path, nFFT):
   t = time_sound[int(offset * 1/3): int(offset * 2/3)]
   time_step = 0.03 # = 30ms
   # m = len(np.arange(t[0], t[-1], time_step))
-  m = 2
+  m = 3
 
   features = np.zeros(nFFT, dtype=np.complex128)
   for (i) in range(m):
-    frame = x1[int(x1.shape[0] * i/m ): int(x1.shape[0] * (i + 1)/m)]
-    features += SingleFrameFFT(frame, nFFT = nFFT)
+    # frame = x1[int(x1.shape[0] * i/m ): int(x1.shape[0] * (i + 1)/m)]
+    frame = x1[int(x1.shape[0] * i/m ): int(x1.shape[0] * i/m + 2 * window_length)]
+    features += SingleFrameFFT(frame, nFFT = nFFT, swfunc = swfunc)
 
   return features / m
 
+def euclidean_distance(a, b):
+    return abs(a - b)
 
-for NFFT in config["nffts"]:
-  m = {
-    "a":np.zeros(NFFT, dtype=np.complex128),
-    "e":np.zeros(NFFT, dtype=np.complex128),
-    "i":np.zeros(NFFT, dtype=np.complex128),
-    "o":np.zeros(NFFT, dtype=np.complex128),
-    "u":np.zeros(NFFT, dtype=np.complex128),
-  }
+for swfunc in config["swfunc"]:
+  print(swfunc)
+  for NFFT in config["nffts"]:
+    m = {
+      "a":np.zeros(NFFT, dtype=np.complex128),
+      "e":np.zeros(NFFT, dtype=np.complex128),
+      "i":np.zeros(NFFT, dtype=np.complex128),
+      "o":np.zeros(NFFT, dtype=np.complex128),
+      "u":np.zeros(NFFT, dtype=np.complex128),
+    }
 
-  for path in glob.glob(config["train_path"] + "/**/*.wav"):
-    label = os.path.basename(path).split(".")[0]
-    features = getFeaturesVector(path, nFFT = NFFT)
-    m[label] += features
+    for path in glob.glob(config["train_path"] + "/**/*.wav"):
+      label = os.path.basename(path).split(".")[0]
+      features = getFeaturesVector(path, nFFT = NFFT, swfunc=swfunc)
+      m[label] += features
 
-  for a in config["am"]:
-    m[a] /= len(os.listdir(config["train_path"]))
-
-  y_true = []
-  y_pred = []
-
-  for fname in glob.glob(config["valid_path"] + "/**/*.wav"):
-    label = os.path.basename(fname).split(".")[0]
-    yhat = getFeaturesVector(fname, nFFT = NFFT)
-    pred = []
     for a in config["am"]:
-      s = 0
-      for (i) in range(NFFT):
-        s += euclidean_distance(abs(m[a][i]), abs(yhat[i]))
-      pred.append(s)
+      m[a] /= len(os.listdir(config["train_path"]))
 
-    y_pred.append(config["am"][np.argmin(pred)])
-    y_true.append(label)
-  
-  plt.rcParams["figure.figsize"] = (20, 5)
-  from matplotlib import cm
-  fig, axs = plt.subplots(1, 5)
-  fig.figsize = (20,30)
-  fig.suptitle("Vector đặc trưng với FFT (N = {})".format(NFFT), fontsize=16)
-  for i in range(len(config["am"])):
-    axs[i].set_title("/"+config["am"][i]+"/")
-    axs[i].plot(20*np.log10(abs(m[config["am"][i]][:len(m[config["am"][i]])//2])))
-    axs[i].set_ylim([-100, 20])
-    axs[i].set_ylabel("dB")
+    y_true = []
+    y_pred = []
 
-  fig.tight_layout()
-  fig.show()
+    for fname in glob.glob(config["valid_path"] + "/**/*.wav"):
+      label = os.path.basename(fname).split(".")[0]
+      yhat = getFeaturesVector(fname, nFFT = NFFT, swfunc=swfunc)
+      pred = []
+      for a in config["am"]:
+        s = 0
+        for (i) in range(NFFT):
+          s += euclidean_distance(abs(m[a][i]), abs(yhat[i]))
+        pred.append(s)
 
-  fig, axs = plt.subplots(1)
-  for a in config["am"]:
-    axs.plot(20*np.log10(abs(m[a][:len(m[a])//2])), label = "/"+a+"/")
+      y_pred.append(config["am"][np.argmin(pred)])
+      y_true.append(label)
 
-  axs.set_ylabel("dB")
-  axs.legend()
-  fig.show()
+    plt.rcParams["figure.figsize"] = (20, 5)
 
-  from sklearn.metrics import classification_report, accuracy_score
-  print(classification_report(y_true, y_pred))
-  print(accuracy_score(y_true, y_pred))
+    from matplotlib import cm
+    fig, axs = plt.subplots(1, 5)
+    fig.figsize = (20,30)
+    fig.suptitle("Vector đặc trưng với FFT (N = {})".format(NFFT), fontsize=16)
+    for i in range(len(config["am"])):
+      axs[i].set_title("/"+config["am"][i]+"/")
+      axs[i].plot(20*np.log10(abs(m[config["am"][i]][:len(m[config["am"][i]])//2])))
+      axs[i].set_ylim([-100, 20])
+      axs[i].set_ylabel("dB")
 
-  from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
-  cm = confusion_matrix(y_true, y_pred, labels=config["am"])
-  
-  plt.rcParams["figure.figsize"] = (10, 8)
-  disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=config["am"])
-  disp.plot()
-  plt.show()
+    fig.tight_layout()
+    fig.show()
+
+    fig, axs = plt.subplots(1)
+    for a in config["am"]:
+      axs.plot(20*np.log10(abs(m[a][:len(m[a])//2])), label = "/"+a+"/")
+
+    axs.set_ylabel("dB")
+    axs.legend()
+    fig.show()
+
+    from sklearn.metrics import classification_report, accuracy_score
+    print(classification_report(y_true, y_pred))
+    print(accuracy_score(y_true, y_pred))
+
+    from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+    cm = confusion_matrix(y_true, y_pred, labels=config["am"])
+
+    plt.rcParams["figure.figsize"] = (10, 8)
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=config["am"])
+    disp.plot()
+    plt.show()
