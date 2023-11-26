@@ -58,16 +58,21 @@ train_data = SignalDataset(config["train_path"])
 valid_data = SignalDataset(config["valid_path"])
 
 import matplotlib.pyplot as plt
-plt.rcParams["figure.figsize"] = (20,10)
-fig, axs = plt.subplots(5)
-fig.figsize = (20,30)
-for (i) in range(5):
-  (sample_rate, data, length), human,label = train_data[i]
-  time = np.linspace(0., length, data.shape[0])
-  axs[i].set_title("{} - {}".format(human, label))
-  axs[i].specgram(data, Fs = sample_rate)
-  axs[i].set(xlabel='Time', ylabel='Frequency')
-  
-fig.tight_layout()
-fig.show()
-plt.show()
+plt.rcParams["figure.figsize"] = (20,20)
+
+human_nums = 4
+for i in range (human_nums):
+  fig, axs = plt.subplots(5)
+  fig.figsize = (20,30)
+
+  for (j) in range(5):
+    (sample_rate, data, length), human,label = train_data[j + i * 5]
+    time = np.linspace(0., length, data.shape[0])
+    axs[j].set_title("{} - {}".format(human, label))
+    axs[j].specgram(data, Fs = sample_rate)
+    axs[j].set(xlabel='Time', ylabel='Frequency')
+
+  fig.tight_layout()
+  fig.show()
+
+  plt.show()
