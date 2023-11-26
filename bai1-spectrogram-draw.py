@@ -14,10 +14,16 @@ def getWavFileContents(pathFile):
     length = data.shape[0] / sample_rate
     return sample_rate, data, length
 
+import os
+import glob
+import scipy
+import numpy as np
+import librosa
+
 class SignalDataset():
   def __init__(self, data_directory):
     self.audio_paths = self.load(data_directory)
-  
+
   def __getitem__(self, idx):
     audio_path = self.audio_paths[idx]
 
@@ -27,14 +33,14 @@ class SignalDataset():
     # ====================================
 
     # ==== read data =====================
-    sample_rate, data, length = getWavFileContents(audio_path)
+    y, fs = librosa.load(audio_path, sr = None)
     # ====================================
 
     # === get human say ==================
     human = self.audio_paths[idx].split("/")[-2]
     # ====================================
 
-    return (sample_rate, data, length), human , label
+    return (fs, y, y.shape[0] / fs), human , label
 
   def __len__(self):
     return len(self.audio_paths)
