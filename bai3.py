@@ -31,7 +31,7 @@ def extract_mfcc(y, sr=22050, n_mfcc=10, n_fft=1024):
     except Exception as e:
         print(f"Cannot extract MFCC: {e}")
         return None
-    
+
 def getFeaturesVector(file_path, n_mfcc = 13, n_fft=1024):
   # ==== get label =====================
   filename = os.path.basename(file_path)
@@ -180,5 +180,9 @@ for n_fft in config["nffts"]:
 
   plt.rcParams["figure.figsize"] = (10, 8)
   disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=config["am"])
-  disp.plot()
+  fig, ax = plt.subplots(figsize=(10,10))
+  disp.plot(ax=ax)
+  fig.set_figwidth(3)
+  fig.set_figheight(3)
+  fig.show()
   plt.show()

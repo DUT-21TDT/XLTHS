@@ -33,7 +33,7 @@ def extract_mfcc(y, sr=22050, n_mfcc=10, n_fft=1024):
     except Exception as e:
         print(f"Cannot extract MFCC: {e}")
         return None
-    
+
 def getFeaturesVector(file_path, n_mfcc = 13, n_fft=1024):
   # ==== get label =====================
   filename = os.path.basename(file_path)
@@ -130,7 +130,20 @@ for K in config["K"]:
     for a in config["am"]:
       m[a].fit(data[a])
 
+    plt.rcParams["figure.figsize"] = (20, 5)
+    fig, axs = plt.subplots(1, 5)
+    fig.figsize = (20,30)
+    fig.suptitle("Vector đặc trưng mfcc (m={}) với FFT (N = {}) - Phân cụm K = {}".format(config["mfcc"], n_fft, K), fontsize=16)
+    i_am_key = 0
+    for am_key in config["am"]:
+      fmean = modelPredictFeature2(features, am_key, K, config["mfcc"], data, m)
+      for id in range(K):
+        axs[i_am_key].set_title(f"/{am_key}/")
+        axs[i_am_key].plot(fmean[id], label = f"/{am_key}/ - cụm {id}")
+      i_am_key = i_am_key + 1
 
+    fig.tight_layout()
+    fig.show()
 
     y_pred = []
     y_true = []
@@ -162,5 +175,12 @@ for K in config["K"]:
     from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
     cm = confusion_matrix(y_true, y_pred, labels=config["am"])
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=config["am"])
-    disp.plot()
+    # disp.plot()
+    # plt.show()
+
+    fig, ax = plt.subplots(figsize=(10,10))
+    disp.plot(ax=ax)
+    fig.set_figwidth(3)
+    fig.set_figheight(3)
+    fig.show()
     plt.show()

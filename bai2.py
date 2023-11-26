@@ -11,7 +11,7 @@ config = {
   "valid_path":"signals/NguyenAmKiemThu-16k",
   "nffts": [512, 1024, 2048],
   "am": ["a", "e", "i", "o", "u"],
-  "swfunc": [np.ones, np.hamming, np.hanning, np.blackman, np.bartlett]
+  "swfunc": [np.bartlett, np.ones, np.hamming, np.hanning, np.blackman]
 }
 
 # No window function
@@ -21,7 +21,7 @@ config = {
 # Rectangle
 # def SingleFrameFFT(frame, nFFT):
 #   signal = np.ones(len(frame)) * frame
-#   return np.fft.fft(frame, nFFT)
+#   return np.fft.fft(signal, nFFT)
 
 # Hamming
 # def SingleFrameFFT(frame, nFFT):
@@ -103,7 +103,7 @@ def euclidean_distance(a, b):
     return abs(a - b)
 
 for swfunc in config["swfunc"]:
-  print(swfunc)
+  print("\n", swfunc)
   for NFFT in config["nffts"]:
     m = {
       "a":np.zeros(NFFT, dtype=np.complex128),
@@ -145,29 +145,33 @@ for swfunc in config["swfunc"]:
     fig.suptitle("Vector đặc trưng với FFT (N = {})".format(NFFT), fontsize=16)
     for i in range(len(config["am"])):
       axs[i].set_title("/"+config["am"][i]+"/")
-      axs[i].plot(20*np.log10(abs(m[config["am"][i]][:len(m[config["am"][i]])//2])))
-      axs[i].set_ylim([-100, 20])
-      axs[i].set_ylabel("dB")
+      axs[i].plot((abs(m[config["am"][i]][:len(m[config["am"][i]])//2])))
+      axs[i].set_ylim([0, 1.5])
+      axs[i].set_ylabel("Magnitude")
 
     fig.tight_layout()
     fig.show()
 
     fig, axs = plt.subplots(1)
     for a in config["am"]:
-      axs.plot(20*np.log10(abs(m[a][:len(m[a])//2])), label = "/"+a+"/")
+      axs.plot((abs(m[a][:len(m[a])//2])), label = "/"+a+"/")
 
-    axs.set_ylabel("dB")
+    axs.set_ylabel("Magnitude")
     axs.legend()
     fig.show()
-
-    from sklearn.metrics import classification_report, accuracy_score
-    print(classification_report(y_true, y_pred))
-    print(accuracy_score(y_true, y_pred))
 
     from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
     cm = confusion_matrix(y_true, y_pred, labels=config["am"])
 
     plt.rcParams["figure.figsize"] = (10, 8)
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=config["am"])
-    disp.plot()
+    fig, ax = plt.subplots(figsize=(10,10))
+    disp.plot(ax=ax)
+    fig.set_figwidth(3)
+    fig.set_figheight(3)
+    fig.show()
     plt.show()
+
+    from sklearn.metrics import classification_report, accuracy_score
+    print(classification_report(y_true, y_pred))
+    print(accuracy_score(y_true, y_pred))
